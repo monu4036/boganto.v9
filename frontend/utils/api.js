@@ -128,6 +128,10 @@ export const utils = {
   getImageUrl: (imagePath) => {
     if (!imagePath) return '';
     if (imagePath.startsWith('http')) return imagePath;
+    // Handle both full paths and just filenames
+    if (imagePath.startsWith('/uploads/')) {
+      return `${API_BASE_URL}${imagePath}`;
+    }
     return `${API_BASE_URL}/uploads/${imagePath.replace(/^.*[\/]/, '')}`;
   },
 

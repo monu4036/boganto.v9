@@ -4,7 +4,7 @@ class DatabaseConfig {
     private $host = 'localhost';
     private $db_name = 'boganto_blog';
     private $username = 'root';
-    private $password = 'Vj2004@jangid';
+    private $password = '';
     public $conn;
 
     public function getConnection() {
@@ -27,12 +27,14 @@ class DatabaseConfig {
 $allowed_origins = [
     'http://localhost:5173', 
     'http://localhost:3000',
+    'https://3000-iubpel86nq4m5vrzumg2g-6532622b.e2b.dev',
+    'https://5173-iubpel86nq4m5vrzumg2g-6532622b.e2b.dev'
 ];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $origin");
 } else {
-    header("Access-Control-Allow-Origin: http://localhost:5173/");
+    header("Access-Control-Allow-Origin: https://3000-iubpel86nq4m5vrzumg2g-6532622b.e2b.dev");
 }
 header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json; charset=UTF-8");
@@ -98,9 +100,9 @@ function getFullImageUrl($imagePath) {
     }
     
     // Determine the appropriate base URL
-    $baseUrl = 'http://localhost:8000';
+    $baseUrl = 'https://8000-iubpel86nq4m5vrzumg2g-6532622b.e2b.dev';
     if (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'e2b.dev') !== false) {
-        $baseUrl = 'http://localhost:8000';
+        $baseUrl = 'https://8000-iubpel86nq4m5vrzumg2g-6532622b.e2b.dev';
     }
     
     // If it's a relative path to uploads, convert to full URL

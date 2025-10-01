@@ -21,6 +21,7 @@ export async function getServerSideProps({ params }) {
     
     if (response && response.blog) {
       console.log('Blog data found:', response.blog)
+      console.log('Related books in SSR:', response.blog.related_books)
       return {
         props: {
           initialBlog: response.blog,
@@ -57,7 +58,9 @@ function BlogDetailPage({ initialBlog = null, relatedArticles = [] }) {
   const router = useRouter()
   const { slug } = router.query
   const [blog, setBlog] = useState(initialBlog)
-  const [relatedBooks, setRelatedBooks] = useState([])
+  const [relatedBooks, setRelatedBooks] = useState(
+    initialBlog && initialBlog.related_books ? initialBlog.related_books : []
+  )
   const [loading, setLoading] = useState(!initialBlog)
   const [error, setError] = useState(null)
   const [tableOfContents, setTableOfContents] = useState([])
@@ -83,13 +86,22 @@ function BlogDetailPage({ initialBlog = null, relatedArticles = [] }) {
       setError(null)
       
       const response = await blogAPI.getBlogBySlug(slug)
+      console.log('Blog response with related books:', response)
+      
       setBlog(response.blog)
-      if (response.blog && Array.isArray(response.blog.related_books)) {
-        setRelatedBooks(response.blog.related_books)
+      
+      // Set related books from the response
+      if (response.blog && response.blog.related_books) {
+        console.log('Related books found:', response.blog.related_books)
+        setRelatedBooks(Array.isArray(response.blog.related_books) ? response.blog.related_books : [])
       } else {
+        console.log('No related books found in response')
         setRelatedBooks([])
       }
+      
+      setLoading(false)
     } catch (err) {
+      console.error('Error fetching blog detail:', err)
       if (err.status === 404) {
         setError('Blog post not found')
       } else {
@@ -485,75 +497,62 @@ function BlogDetailPage({ initialBlog = null, relatedArticles = [] }) {
                 <div className="bg-white rounded-xl shadow-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-6">Related Books</h4>
                   <div className="space-y-4">
-                    {/* Static Related Books for Design - Replace with dynamic content */}
-                    {relatedBooks.length > 0 ? relatedBooks.map((book) => (
-                      <div key={book.id} className="flex gap-3 pb-4 border-b border-gray-100 last:border-b-0 last:pb-0">
-                        <div className="w-12 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded flex-shrink-0 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">📚</span>
+                    {relatedBooks && relatedBooks.length > 0 ? (
+                      relatedBooks.map((book) => (
+                        <div key={book.id} className="flex gap-3 pb-4 border-b border-gray-100 last:border-b-0 last:pb-0 group hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                          <div className="w-12 h-16 flex-shrink-0 rounded overflow-hidden">
+                            {book.cover_image ? (
+                              <img
+                                src={utils.getImageUrl(book.cover_image)}
+                                alt={book.title}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to gradient background if image fails to load
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div className={`w-full h-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center ${book.cover_image ? 'hidden' : 'flex'}`}>
+                              <span className="text-white text-xs font-bold">📚</span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1 group-hover:text-orange-600 transition-colors">
+                              {book.title}
+                            </h5>
+                            {book.author && (
+                              <p className="text-gray-600 text-xs mb-1">by {book.author}</p>
+                            )}
+                            {book.price && (
+                              <p className="text-orange-600 font-semibold text-sm mb-2">{book.price}</p>
+                            )}
+                            {book.description && (
+                              <p className="text-gray-600 text-xs leading-relaxed mb-2 line-clamp-2">
+                                {book.description}
+                              </p>
+                            )}
+                            {book.purchase_link && (
+                              <a
+                                href={book.purchase_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-xs text-orange-600 hover:text-orange-700 font-medium"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Buy Now
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">{book.title}</h5>
-                          <p className="text-orange-600 font-semibold text-sm">{book.price}</p>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="mb-4">
+                          <span className="text-4xl">📚</span>
                         </div>
+                        <p className="text-sm">No related books available for this article.</p>
                       </div>
-                    )) : (
-                      // Static fallback books for design purposes
-                      <>
-                        <div className="flex gap-3 pb-4 border-b border-gray-100">
-                          <div className="w-12 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded flex-shrink-0 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">📖</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">The Silent Patient</h5>
-                            <p className="text-orange-600 font-semibold text-sm">$24.99</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 pb-4 border-b border-gray-100">
-                          <div className="w-12 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded flex-shrink-0 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">⚛️</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">Atomic Habits</h5>
-                            <p className="text-orange-600 font-semibold text-sm">$19.99</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 pb-4 border-b border-gray-100">
-                          <div className="w-12 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded flex-shrink-0 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">🌙</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">The Seven Moons</h5>
-                            <p className="text-orange-600 font-semibold text-sm">$22.50</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 pb-4 border-b border-gray-100">
-                          <div className="w-12 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded flex-shrink-0 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">✍️</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">Literary Journeys</h5>
-                            <p className="text-orange-600 font-semibold text-sm">$18.99</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 pb-4 border-b border-gray-100">
-                          <div className="w-12 h-16 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded flex-shrink-0 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">🔬</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">Science Books</h5>
-                            <p className="text-orange-600 font-semibold text-sm">$26.99</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <div className="w-12 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded flex-shrink-0 flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">📚</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 text-sm leading-tight mb-1">Personal Library</h5>
-                            <p className="text-orange-600 font-semibold text-sm">$21.99</p>
-                          </div>
-                        </div>
-                      </>
                     )}
                   </div>
                 </div>
