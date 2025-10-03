@@ -122,17 +122,16 @@ function addBlog($db) {
         
         // Handle related books
         if (isset($_POST['related_books']) && $_POST['related_books']) {
-            error_log('Received related_books: ' . print_r($_POST['related_books'], true));
             $related_books = json_decode($_POST['related_books'], true);
-            error_log('Decoded related_books: ' . print_r($related_books, true));
-            if ($related_books && is_array($related_books)) {
+            $json_error = json_last_error();
+            
+            if ($json_error !== JSON_ERROR_NONE) {
+                error_log('JSON decode error for related_books: ' . json_last_error_msg());
+            } elseif ($related_books && is_array($related_books) && count($related_books) > 0) {
                 addRelatedBooks($db, $blog_id, $related_books);
             } else {
-                error_log('Failed to decode related_books or not an array');
+                error_log('Related books data is empty or invalid after JSON decode');
             }
-        } else {
-            error_log('No related_books found in POST data');
-            error_log('POST data: ' . print_r($_POST, true));
         }
         
         sendResponse(['message' => 'Blog created successfully', 'blog_id' => $blog_id, 'slug' => $slug], 201);
@@ -269,7 +268,11 @@ function updateBlog($db) {
         // Handle related books for form data updates
         if ($isFormData && isset($_POST['related_books']) && $_POST['related_books']) {
             $related_books = json_decode($_POST['related_books'], true);
-            if ($related_books && is_array($related_books)) {
+            $json_error = json_last_error();
+            
+            if ($json_error !== JSON_ERROR_NONE) {
+                error_log('JSON decode error for related_books in update: ' . json_last_error_msg());
+            } elseif ($related_books && is_array($related_books) && count($related_books) > 0) {
                 addRelatedBooks($db, $id, $related_books);
             }
         }
@@ -301,9 +304,6 @@ function deleteBlog($db, $id) {
 
 function addRelatedBooks($db, $blog_id, $books) {
     try {
-        error_log("Adding related books for blog_id: " . $blog_id);
-        error_log("Books data: " . print_r($books, true));
-        error_log("FILES data: " . print_r($_FILES, true));
         
         // Delete existing related books
         $delete_query = "DELETE FROM related_books WHERE blog_id = :blog_id";
@@ -335,20 +335,32 @@ function addRelatedBooks($db, $blog_id, $books) {
                     }
                 }
                 
+                // Prepare variables for binding (bindParam requires variables, not expressions)
+                $title = $book['title'];
+                $author = $book['author'] ?? '';
+                $purchase_link = $book['purchase_link'];
+                $description = $book['description'] ?? '';
+                $price = $book['price'] ?? '';
+                
                 $insert_stmt->bindParam(':blog_id', $blog_id, PDO::PARAM_INT);
-                $insert_stmt->bindParam(':title', $book['title']);
-                $insert_stmt->bindParam(':author', $book['author'] ?? '');
-                $insert_stmt->bindParam(':purchase_link', $book['purchase_link']);
+                $insert_stmt->bindParam(':title', $title);
+                $insert_stmt->bindParam(':author', $author);
+                $insert_stmt->bindParam(':purchase_link', $purchase_link);
                 $insert_stmt->bindParam(':cover_image', $cover_image);
-                $insert_stmt->bindParam(':description', $book['description'] ?? '');
-                $insert_stmt->bindParam(':price', $book['price'] ?? '');
+                $insert_stmt->bindParam(':description', $description);
+                $insert_stmt->bindParam(':price', $price);
+                
                 $insert_stmt->execute();
+            } else {
+                error_log('Related book missing required fields (title or purchase_link): ' . json_encode($book));
             }
         }
         
     } catch (PDOException $e) {
         // Log error but don't fail the main operation
         error_log('Failed to add related books: ' . $e->getMessage());
+    } catch (Exception $e) {
+        error_log('General error in addRelatedBooks: ' . $e->getMessage());
     }
 }
 
