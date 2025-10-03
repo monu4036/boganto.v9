@@ -122,10 +122,17 @@ function addBlog($db) {
         
         // Handle related books
         if (isset($_POST['related_books']) && $_POST['related_books']) {
+            error_log('Received related_books: ' . print_r($_POST['related_books'], true));
             $related_books = json_decode($_POST['related_books'], true);
+            error_log('Decoded related_books: ' . print_r($related_books, true));
             if ($related_books && is_array($related_books)) {
                 addRelatedBooks($db, $blog_id, $related_books);
+            } else {
+                error_log('Failed to decode related_books or not an array');
             }
+        } else {
+            error_log('No related_books found in POST data');
+            error_log('POST data: ' . print_r($_POST, true));
         }
         
         sendResponse(['message' => 'Blog created successfully', 'blog_id' => $blog_id, 'slug' => $slug], 201);
@@ -294,6 +301,10 @@ function deleteBlog($db, $id) {
 
 function addRelatedBooks($db, $blog_id, $books) {
     try {
+        error_log("Adding related books for blog_id: " . $blog_id);
+        error_log("Books data: " . print_r($books, true));
+        error_log("FILES data: " . print_r($_FILES, true));
+        
         // Delete existing related books
         $delete_query = "DELETE FROM related_books WHERE blog_id = :blog_id";
         $delete_stmt = $db->prepare($delete_query);

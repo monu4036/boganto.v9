@@ -117,15 +117,13 @@ function getAllBlogs($db) {
         // Format blogs data
         $formatted_blogs = array_map('formatBlog', $blogs);
         
-        // Load related books for admin requests
-        if ($is_admin_request) {
-            foreach ($formatted_blogs as &$blog) {
-                $books_query = "SELECT * FROM related_books WHERE blog_id = :blog_id ORDER BY id ASC";
-                $books_stmt = $db->prepare($books_query);
-                $books_stmt->bindParam(':blog_id', $blog['id'], PDO::PARAM_INT);
-                $books_stmt->execute();
-                $blog['related_books'] = $books_stmt->fetchAll(PDO::FETCH_ASSOC);
-            }
+        // Load related books for ALL requests (not just admin)
+        foreach ($formatted_blogs as &$blog) {
+            $books_query = "SELECT * FROM related_books WHERE blog_id = :blog_id ORDER BY id ASC";
+            $books_stmt = $db->prepare($books_query);
+            $books_stmt->bindParam(':blog_id', $blog['id'], PDO::PARAM_INT);
+            $books_stmt->execute();
+            $blog['related_books'] = $books_stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         
         $response = [
@@ -269,7 +267,8 @@ function formatBlog($blog) {
         'status' => $blog['status'],
         'view_count' => (int)$blog['view_count'],
         'created_at' => $blog['created_at'],
-        'updated_at' => $blog['updated_at']
+        'updated_at' => $blog['updated_at'],
+        'related_books' => [] // Will be populated later if needed
     ];
 }
 ?>

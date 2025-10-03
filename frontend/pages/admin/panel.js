@@ -235,11 +235,21 @@ const AdminPanel = () => {
 
       // Add related books and their cover images
       if (relatedBooks.length > 0) {
+        console.log('Related books before processing:', relatedBooks);
+        
         // Add related books data without cover_image files
         const booksData = relatedBooks.map(book => {
-          const { cover_image, ...bookData } = book
+          // Ensure all required fields are present and properly formatted
+          const bookData = {
+            title: book.title || '',
+            author: book.author || '',
+            purchase_link: book.purchase_link || '',
+            description: book.description || '',
+            price: book.price || ''
+          }
           return bookData
         })
+        console.log('Books data being sent:', booksData);
         formPayload.append('related_books', JSON.stringify(booksData))
         
         // Add cover image files separately

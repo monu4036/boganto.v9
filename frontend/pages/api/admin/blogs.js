@@ -18,7 +18,11 @@ export default async function handler(req, res) {
 
     // Handle multipart form data for file uploads
     if (req.headers['content-type']?.startsWith('multipart/form-data')) {
-      const form = formidable()
+      const form = formidable({
+        multiples: true,
+        keepExtensions: true,
+        maxFileSize: 5 * 1024 * 1024 // 5MB
+      })
       const [fields, files] = await form.parse(req)
       
       const formData = new FormData()
@@ -26,17 +30,32 @@ export default async function handler(req, res) {
       // Add fields to FormData
       Object.keys(fields).forEach(key => {
         const value = Array.isArray(fields[key]) ? fields[key][0] : fields[key]
-        formData.append(key, value)
+        // Special handling for related_books to preserve JSON structure
+        if (key === 'related_books') {
+          formData.append(key, value)
+          console.log('Related books being sent to backend:', value)
+        } else {
+          formData.append(key, value)
+        }
       })
       
       // Add files to FormData
       Object.keys(files).forEach(key => {
         const file = Array.isArray(files[key]) ? files[key][0] : files[key]
         if (file && file.filepath) {
-          formData.append(key, fs.createReadStream(file.filepath), {
-            filename: file.originalFilename,
-            contentType: file.mimetype
-          })
+          // Check if this is a book cover image
+          if (key.startsWith('book_cover_')) {
+            formData.append(key, fs.createReadStream(file.filepath), {
+              filename: file.originalFilename,
+              contentType: file.mimetype
+            })
+            console.log('Adding book cover:', key, file.originalFilename)
+          } else {
+            formData.append(key, fs.createReadStream(file.filepath), {
+              filename: file.originalFilename,
+              contentType: file.mimetype
+            })
+          }
         }
       })
       
